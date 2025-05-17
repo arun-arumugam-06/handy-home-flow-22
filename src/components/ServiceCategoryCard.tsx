@@ -2,7 +2,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { 
-  Wrench, Tools, ShowerHead, Lightbulb, Plug, 
+  Wrench, ArrowRight, ShowerHead, Lightbulb, Plug, 
   Fan, AirVent, Utensils, Briefcase
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -29,7 +29,7 @@ const ServiceCategoryCard: React.FC<ServiceCategoryCardProps> = ({
       case 'electrical':
         return <Lightbulb className="h-8 w-8" />;
       case 'handyman':
-        return <Tools className="h-8 w-8" />;
+        return <Wrench className="h-8 w-8" />; // Using Wrench instead of Tools
       case 'cleaning':
         return <ShowerHead className="h-8 w-8" />;
       case 'appliance':

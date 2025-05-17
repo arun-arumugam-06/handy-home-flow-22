@@ -1,11 +1,10 @@
-
 import React from "react";
 import { Link } from "react-router-dom";
 import MainNav from "@/components/layout/MainNav";
 import Footer from "@/components/layout/Footer";
 import ServiceCategoryCard from "@/components/ServiceCategoryCard";
 import { Button } from "@/components/ui/button";
-import { CheckCircle } from "lucide-react";
+import { CheckCircle, Star } from "lucide-react";
 
 const services = [
   {

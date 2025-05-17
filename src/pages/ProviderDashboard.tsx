@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Link } from "react-router-dom";
 import {
@@ -73,11 +72,13 @@ const completedBookings = [
 ];
 
 const ProviderDashboardSidebar = () => {
-  const { collapsed } = useSidebar();
+  const sidebar = useSidebar();
+  const collapsed = sidebar.state === "collapsed";
+  
   return (
     <Sidebar
       className={collapsed ? "w-14 border-r" : "w-64 border-r"}
-      collapsible
+      collapsible="icon"
     >
       <div className="flex h-14 items-center justify-between border-b px-4">
         {!collapsed && <div className="font-semibold">HandyFlow Pro</div>}
