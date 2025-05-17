@@ -91,10 +91,10 @@ const MainNav = () => {
               </Link>
             ))}
             <div className="flex flex-col space-y-2 pt-4">
-              <Link to="/login">
+              <Link to="/login" onClick={() => setIsOpen(false)}>
                 <Button variant="outline" className="w-full" size="sm">Log in</Button>
               </Link>
-              <Link to="/signup">
+              <Link to="/signup" onClick={() => setIsOpen(false)}>
                 <Button className="w-full" size="sm">Sign up</Button>
               </Link>
             </div>

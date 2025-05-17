@@ -1,6 +1,6 @@
 
-import React, { useState } from "react";
-import { useLocation, Link } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useLocation, Link, useParams } from "react-router-dom";
 import MainNav from "@/components/layout/MainNav";
 import Footer from "@/components/layout/Footer";
 import ProviderCard from "@/components/ProviderCard";
@@ -28,9 +28,10 @@ import {
 } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Search, MapPin, Star } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 
 // Sample data
-const providers = [
+const allProviders = [
   {
     id: "1",
     name: "John Doe",
@@ -40,7 +41,13 @@ const providers = [
     ratingCount: 142,
     tags: ["Leak Repair", "Pipe Installation", "Emergency Service"],
     price: "$60/hour",
+    priceValue: 60,
     verified: true,
+    available: true,
+    availableToday: true,
+    availableWeekend: true,
+    emergencyService: true,
+    category: "plumbing",
   },
   {
     id: "2",
@@ -51,7 +58,13 @@ const providers = [
     ratingCount: 98,
     tags: ["Wiring", "Lighting Installation", "Troubleshooting"],
     price: "$75/hour",
+    priceValue: 75,
     verified: true,
+    available: true,
+    availableToday: false,
+    availableWeekend: true,
+    emergencyService: false,
+    category: "electrical",
   },
   {
     id: "3",
@@ -62,7 +75,13 @@ const providers = [
     ratingCount: 215,
     tags: ["Deep Cleaning", "Regular Cleaning", "Move-in/out"],
     price: "$50/hour",
+    priceValue: 50,
     verified: true,
+    available: true,
+    availableToday: true,
+    availableWeekend: false,
+    emergencyService: false,
+    category: "cleaning",
   },
   {
     id: "4",
@@ -73,7 +92,13 @@ const providers = [
     ratingCount: 76,
     tags: ["Assembly", "Mounting", "Repairs"],
     price: "$55/hour",
+    priceValue: 55,
     verified: false,
+    available: true,
+    availableToday: false,
+    availableWeekend: true,
+    emergencyService: false,
+    category: "handyman",
   },
   {
     id: "5",
@@ -84,7 +109,13 @@ const providers = [
     ratingCount: 112,
     tags: ["Refrigerator", "Washer/Dryer", "Dishwasher"],
     price: "$70/hour",
+    priceValue: 70,
     verified: true,
+    available: true,
+    availableToday: true,
+    availableWeekend: true,
+    emergencyService: true,
+    category: "appliance",
   },
   {
     id: "6",
@@ -95,7 +126,13 @@ const providers = [
     ratingCount: 87,
     tags: ["Meal Prep", "Special Events", "Dietary Restrictions"],
     price: "$85/hour",
+    priceValue: 85,
     verified: true,
+    available: true,
+    availableToday: false,
+    availableWeekend: true,
+    emergencyService: false,
+    category: "cooking",
   },
 ];
 
@@ -134,14 +171,158 @@ const serviceCategories = [
 
 const Services = () => {
   const location = useLocation();
+  const { category: categoryParam } = useParams<{ category?: string }>();
   const searchParams = new URLSearchParams(location.search);
-  const categoryParam = searchParams.get("category");
-
-  const [selectedCategory, setSelectedCategory] = useState(categoryParam || "all");
+  const initialCategoryParam = categoryParam || searchParams.get("category") || "all";
+  
+  const [selectedCategory, setSelectedCategory] = useState(initialCategoryParam);
   const [searchQuery, setSearchQuery] = useState("");
+  const [location2, setLocation2] = useState("New York, NY");
   const [priceRange, setPriceRange] = useState([0, 100]);
   const [sortBy, setSortBy] = useState("rating");
   const [view, setView] = useState("grid");
+  const [minRating, setMinRating] = useState(0);
+  const [selectedSubcategories, setSelectedSubcategories] = useState<string[]>([]);
+  const [availability, setAvailability] = useState({
+    today: false,
+    weekend: false,
+    emergency: false
+  });
+  const [providers, setProviders] = useState(allProviders);
+  const [currentPage, setCurrentPage] = useState(1);
+  const providersPerPage = 4;
+  
+  const { toast } = useToast();
+
+  // Filter providers based on all criteria
+  useEffect(() => {
+    let filtered = [...allProviders];
+    
+    // Filter by category
+    if (selectedCategory !== "all") {
+      filtered = filtered.filter(
+        provider => provider.category === selectedCategory
+      );
+    }
+    
+    // Filter by search query
+    if (searchQuery.trim() !== "") {
+      const query = searchQuery.toLowerCase().trim();
+      filtered = filtered.filter(
+        provider => 
+          provider.name.toLowerCase().includes(query) ||
+          provider.profession.toLowerCase().includes(query) ||
+          provider.tags.some(tag => tag.toLowerCase().includes(query))
+      );
+    }
+    
+    // Filter by price range
+    filtered = filtered.filter(
+      provider => 
+        provider.priceValue >= priceRange[0] && 
+        provider.priceValue <= priceRange[1]
+    );
+    
+    // Filter by minimum rating
+    if (minRating > 0) {
+      filtered = filtered.filter(provider => provider.rating >= minRating);
+    }
+    
+    // Filter by subcategories
+    if (selectedSubcategories.length > 0) {
+      filtered = filtered.filter(provider => 
+        provider.tags.some(tag => 
+          selectedSubcategories.some(subcat => 
+            tag.toLowerCase().includes(subcat.toLowerCase())
+          )
+        )
+      );
+    }
+    
+    // Filter by availability
+    if (availability.today) {
+      filtered = filtered.filter(provider => provider.availableToday);
+    }
+    if (availability.weekend) {
+      filtered = filtered.filter(provider => provider.availableWeekend);
+    }
+    if (availability.emergency) {
+      filtered = filtered.filter(provider => provider.emergencyService);
+    }
+    
+    // Apply sorting
+    switch (sortBy) {
+      case "rating":
+        filtered.sort((a, b) => b.rating - a.rating);
+        break;
+      case "price-low":
+        filtered.sort((a, b) => a.priceValue - b.priceValue);
+        break;
+      case "price-high":
+        filtered.sort((a, b) => b.priceValue - a.priceValue);
+        break;
+      case "reviews":
+        filtered.sort((a, b) => b.ratingCount - a.ratingCount);
+        break;
+    }
+    
+    setProviders(filtered);
+    setCurrentPage(1);
+  }, [selectedCategory, searchQuery, priceRange, minRating, selectedSubcategories, availability, sortBy]);
+
+  // Handle subcategory selection
+  const handleSubcategoryToggle = (subcategory: string) => {
+    setSelectedSubcategories(prev => {
+      if (prev.includes(subcategory)) {
+        return prev.filter(item => item !== subcategory);
+      } else {
+        return [...prev, subcategory];
+      }
+    });
+  };
+
+  // Handle rating filter
+  const handleRatingFilter = (rating: number) => {
+    setMinRating(minRating === rating ? 0 : rating);
+  };
+
+  // Handle availability toggle
+  const handleAvailabilityToggle = (key: keyof typeof availability) => {
+    setAvailability(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
+
+  // Handle search form submission
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    toast({
+      title: "Search initiated",
+      description: `Searching for "${searchQuery}" in ${location2}`
+    });
+  };
+
+  // Handle filter reset
+  const handleReset = () => {
+    setSelectedCategory("all");
+    setSearchQuery("");
+    setPriceRange([0, 100]);
+    setSortBy("rating");
+    setMinRating(0);
+    setSelectedSubcategories([]);
+    setAvailability({
+      today: false,
+      weekend: false,
+      emergency: false
+    });
+  };
+
+  // Pagination
+  const indexOfLastProvider = currentPage * providersPerPage;
+  const indexOfFirstProvider = indexOfLastProvider - providersPerPage;
+  const currentProviders = providers.slice(indexOfFirstProvider, indexOfLastProvider);
+  const totalPages = Math.ceil(providers.length / providersPerPage);
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -156,7 +337,7 @@ const Services = () => {
             </p>
 
             {/* Search Bar */}
-            <div className="mt-6 flex w-full max-w-3xl flex-col gap-4 sm:flex-row">
+            <form onSubmit={handleSearch} className="mt-6 flex w-full max-w-3xl flex-col gap-4 sm:flex-row">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
@@ -173,11 +354,12 @@ const Services = () => {
                   type="text"
                   placeholder="Your location"
                   className="pl-10"
-                  defaultValue="New York, NY"
+                  value={location2}
+                  onChange={(e) => setLocation2(e.target.value)}
                 />
               </div>
-              <Button className="shrink-0">Search</Button>
-            </div>
+              <Button type="submit" className="shrink-0">Search</Button>
+            </form>
           </div>
         </section>
 
@@ -260,6 +442,8 @@ const Services = () => {
                                 type="checkbox"
                                 id={`rating-${rating}`}
                                 className="h-4 w-4"
+                                checked={minRating === rating}
+                                onChange={() => handleRatingFilter(rating)}
                               />
                               <label htmlFor={`rating-${rating}`} className="ml-2 flex items-center text-sm">
                                 {rating}
@@ -286,6 +470,8 @@ const Services = () => {
                                     type="checkbox"
                                     id={`subcat-${index}`}
                                     className="h-4 w-4"
+                                    checked={selectedSubcategories.includes(subcat)}
+                                    onChange={() => handleSubcategoryToggle(subcat)}
                                   />
                                   <label htmlFor={`subcat-${index}`} className="ml-2 text-sm">
                                     {subcat}
@@ -308,6 +494,8 @@ const Services = () => {
                               type="checkbox"
                               id="availability-today"
                               className="h-4 w-4"
+                              checked={availability.today}
+                              onChange={() => handleAvailabilityToggle('today')}
                             />
                             <label htmlFor="availability-today" className="ml-2 text-sm">
                               Available Today
@@ -318,6 +506,8 @@ const Services = () => {
                               type="checkbox"
                               id="availability-weekend"
                               className="h-4 w-4"
+                              checked={availability.weekend}
+                              onChange={() => handleAvailabilityToggle('weekend')}
                             />
                             <label htmlFor="availability-weekend" className="ml-2 text-sm">
                               Available on Weekend
@@ -328,6 +518,8 @@ const Services = () => {
                               type="checkbox"
                               id="availability-emergency"
                               className="h-4 w-4"
+                              checked={availability.emergency}
+                              onChange={() => handleAvailabilityToggle('emergency')}
                             />
                             <label htmlFor="availability-emergency" className="ml-2 text-sm">
                               Emergency Service
@@ -339,8 +531,8 @@ const Services = () => {
                   </Accordion>
 
                   <div className="mt-6 flex flex-col gap-2">
-                    <Button>Apply Filters</Button>
-                    <Button variant="outline">Reset</Button>
+                    <Button onClick={() => toast({ title: "Filters applied" })}>Apply Filters</Button>
+                    <Button variant="outline" onClick={handleReset}>Reset</Button>
                   </div>
                 </div>
               </div>
@@ -393,50 +585,79 @@ const Services = () => {
                     {serviceCategories
                       .find((cat) => cat.id === selectedCategory)
                       ?.subcategories.map((subcat, index) => (
-                        <Badge key={index} variant="outline">
+                        <Badge 
+                          key={index} 
+                          variant={selectedSubcategories.includes(subcat) ? "default" : "outline"}
+                          className="cursor-pointer"
+                          onClick={() => handleSubcategoryToggle(subcat)}
+                        >
                           {subcat}
                         </Badge>
                       ))}
                   </div>
                 )}
 
-                <div className={`grid gap-6 ${view === "grid" ? "sm:grid-cols-2 lg:grid-cols-2" : ""}`}>
-                  {providers.map((provider) => (
-                    <ProviderCard
-                      key={provider.id}
-                      id={provider.id}
-                      name={provider.name}
-                      avatar={provider.avatar}
-                      profession={provider.profession}
-                      rating={provider.rating}
-                      ratingCount={provider.ratingCount}
-                      tags={provider.tags}
-                      price={provider.price}
-                      verified={provider.verified}
-                    />
-                  ))}
-                </div>
+                {currentProviders.length === 0 ? (
+                  <div className="rounded-lg border bg-card p-12 text-center shadow-sm">
+                    <h3 className="text-lg font-medium">No providers found</h3>
+                    <p className="mt-2 text-muted-foreground">Try adjusting your filters or search terms</p>
+                    <Button className="mt-4" onClick={handleReset}>Reset Filters</Button>
+                  </div>
+                ) : (
+                  <div className={`grid gap-6 ${view === "grid" ? "sm:grid-cols-2 lg:grid-cols-2" : ""}`}>
+                    {currentProviders.map((provider) => (
+                      <ProviderCard
+                        key={provider.id}
+                        id={provider.id}
+                        name={provider.name}
+                        avatar={provider.avatar}
+                        profession={provider.profession}
+                        rating={provider.rating}
+                        ratingCount={provider.ratingCount}
+                        tags={provider.tags}
+                        price={provider.price}
+                        verified={provider.verified}
+                      />
+                    ))}
+                  </div>
+                )}
 
                 {/* Pagination */}
-                <div className="mt-8 flex justify-center">
-                  <div className="flex items-center space-x-2">
-                    <Button variant="outline" size="sm" disabled>
-                      Previous
-                    </Button>
-                    <Button variant="outline" size="sm" className="bg-primary text-primary-foreground">
-                      1
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      2
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      3
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      Next
-                    </Button>
+                {totalPages > 1 && (
+                  <div className="mt-8 flex justify-center">
+                    <div className="flex items-center space-x-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        disabled={currentPage === 1}
+                        onClick={() => setCurrentPage(current => Math.max(1, current - 1))}
+                      >
+                        Previous
+                      </Button>
+                      
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                        <Button 
+                          key={page}
+                          variant="outline" 
+                          size="sm" 
+                          className={currentPage === page ? "bg-primary text-primary-foreground" : ""}
+                          onClick={() => setCurrentPage(page)}
+                        >
+                          {page}
+                        </Button>
+                      ))}
+                      
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        disabled={currentPage === totalPages}
+                        onClick={() => setCurrentPage(current => Math.min(totalPages, current + 1))}
+                      >
+                        Next
+                      </Button>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
           </div>
